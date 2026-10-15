@@ -1,10 +1,62 @@
 # THEO AI — Complete Project Handoff Summary
 
-Project handoff • Updated 15 October 2026 • Covers the project background, requirements, architecture, repository work, API integration, screen automation, design, voice, current testing status, known limitations, and next steps.
+Project handoff • Updated 15 October 2026 • Includes verified on-device Gemini screen inspection, the latest passing CI build, observed automation limits, search-driven navigation plans, and overlay design.
 
 This is the detailed handoff for continuing development of **Theo, your Android AI assistant**. It is written directly in this response, not as a text file.
 
 The goal is to preserve the decisions, requirements, implementation details, known problems, and outstanding work so another development session can continue without starting from scratch or repeating earlier mistakes.
+
+
+> **Current progress update — 15 October 2026**
+>
+> This section records the newest user-confirmed device test and supersedes older status notes later in this handoff where they conflict.
+>
+> ## Confirmed working: screen inspection
+>
+> - The user tested screen inspection on their Android device by asking Theo what it could see.
+> - Theo returned a description headed **“Current screen inspection via Gemini vision fallback”** and correctly identified multiple elements of Theo's own UI: the \`THEO // SOLAR CORE\` header, power/RAM/storage stats, the \`GEMINI FAST\` label, the core status, a chat message, action buttons, the command field, and the visible keyboard.
+> - This is meaningful real-device evidence that screenshot-based visual analysis and the Gemini fallback path can work. It is a smoke test of screen description, **not** proof that every provider, app, or automation path works.
+> - The response was cluttered and overly verbose, and it mentioned a nested image preview. Response formatting, concise descriptions, and separation of important observations from irrelevant UI details need improvement.
+>
+> ## Latest build status
+>
+> - Development branch: \`feature/screen-aware-automation\`
+> - Latest verified commit: \`f064c8a1bba473469b1aa89ba36452a4fbace6aa\`
+> - GitHub Actions run **#121** completed successfully, including the workflow's unit-test/build job: https://github.com/Kentaakakashi/Theo-AI-mobile/actions/runs/38781650849
+> - The pull request remains unmerged. Do not merge it unless the user explicitly asks.
+>
+> ## Newly observed automation limitation
+>
+> The user asked Theo to open Discord and play the song **“UNDRESS.”** Theo opened the app but stopped at its search page because the requested song was not already visible. That is a useful partial success, but the overall task was **not completed**.
+>
+> Theo currently needs stronger goal-directed navigation. If the destination is not visible, it should look for a plausible search affordance, open it, enter the requested name, submit the search, inspect the results, choose a sufficiently certain match, and verify the destination or playback state. The same approach should apply to finding a conversation in a chat app when the recipient is not already on screen.
+>
+> This must be a bounded observe–plan–act–observe loop, not a blind sequence of taps. Prefer accessible, labelled controls; use visual context to locate likely controls when useful; re-capture and inspect after each navigation step; handle loading states; and ask the user when there are multiple plausible matches. Opening an app or submitting a search is not proof that the requested song or conversation was reached.
+>
+> ## Floating assistant overlay — planned, not implemented
+>
+> The user also wants a small floating Theo control that remains available while another app is in the foreground. The purpose is to provide status and controls such as pause/stop without repeatedly switching back to Theo's main screen and disrupting the task.
+>
+> Requirements for this design:
+>
+> - The overlay should be a separate, minimal status/control surface, not part of the target app's semantic content.
+> - It must be excluded from Theo's vision description and must not be treated by the planner as a target-app button, label, search result, or other task content.
+> - Screenshot capture should temporarily hide or otherwise reliably exclude Theo's overlay before analyzing the target app, then restore it. Do not assume Android's screenshot API automatically excludes overlay windows; verify the behavior on device.
+> - The overlay should show task state (for example, observing, acting, waiting, needs input, completed, or failed) and provide an obvious pause/stop action.
+> - It must respect Android overlay permission, foreground-service/lifecycle rules, battery behavior, and accessibility safeguards. Do not add a hidden or persistent overlay without a clear user-enabled permission flow.
+> - Theo must continue observing the actual target app and verifying actions while the user stays in that app; switching to Theo manually should not be a required part of normal automation.
+>
+> This overlay is a design requirement for a future implementation. It is **not currently available**.
+>
+> ## Immediate priorities from the latest device test
+>
+> 1. Improve screen-inspection output: concise summary first, key visible controls grouped separately, avoid repeating Theo's own decorative/status UI, and do not describe embedded previews as if their contents were verified unless they were actually analyzed.
+> 2. Implement search-driven navigation for media and chat destinations, with loading waits, fresh observations after actions, ambiguity handling, and verified completion.
+> 3. Design and implement the floating overlay with an explicit screenshot-exclusion mechanism and a user-accessible stop control.
+> 4. Test the entire cross-app loop on the phone: launch app → locate search → enter query → inspect results → choose target → verify final state.
+> 5. Keep cloud screenshot privacy visible to the user; screenshots may contain private information and are sent to the configured vision provider for analysis.
+>
+> **Current truthful status:** Gemini-backed screen description has been confirmed by the user on-device, and the latest CI build passes. Search-driven task completion and the floating overlay remain future work.
 
 ---
 
@@ -744,14 +796,14 @@ This distinction should guide all future updates.
 | Loading-state retry behavior | Existing implementation |
 | Groq key settings field | Added in the latest work |
 | Groq API-key connection test | Added; needs successful build and runtime verification |
-| Screenshot capture on Android 11+ | Implemented in source; device behavior not verified here |
-| Groq Qwen vision request | Implemented in source; live request not verified here |
-| Gemini vision fallback | Implemented in source; model availability and runtime behavior not verified here |
-| Visual description passed to planner | Implemented in source; end-to-end behavior not verified here |
+| Screenshot capture on Android 11+ | Implemented; user-confirmed on-device screen-inspection smoke test succeeded |
+| Groq Qwen vision request | Implemented in source; separate successful live test not established by the latest report |
+| Gemini vision fallback | **Confirmed working for a user-run screen-inspection test on the Android device** |
+| Visual description passed to planner | Screen description confirmed on-device; full cross-app task loop still incomplete |
 | Screenshot bytes cleared after analysis | Cleanup step added; not a guarantee that all copies are erased |
 | Arbitrary visual-coordinate tapping | **Not implemented in the recorded baseline** |
-| Successful full end-to-end screen-automation test on a real phone | **Not established** |
-| Latest GitHub Actions build passing | **Not established** |
+| Successful full end-to-end screen-automation test on a real phone | **Not yet established**; Discord opened, but searching for and playing the requested song did not complete |
+| Latest GitHub Actions build passing | **Confirmed** — run #121 passed for commit `f064c8a1bba473469b1aa89ba36452a4fbace6aa` |
 | All desktop J.A.R.V.I.S. capabilities ported | **Not implemented as a complete set** |
 | Exact JARVIS-style cloud voice | Not established; native Android TTS preference exists |
 
@@ -959,7 +1011,7 @@ Short SHAs are included where that was the level of detail retained in the histo
 
 # 19. Final handoff: what the next session needs to know
 
-The most recent work is an attempt to connect three previously separate pieces into a useful screen-aware assistant:
+The most recent work connects three previously separate pieces into a useful screen-aware assistant. Since this section was first drafted, the user has confirmed a successful Gemini-backed screen-description test on their Android device, and GitHub Actions run #121 has passed for commit `f064c8a1bba473469b1aa89ba36452a4fbace6aa`.
 
 1. **Android automation** provides the ability to launch apps and interact with accessible controls.
 2. **Cloud vision** supplies a description of what is visually displayed.
@@ -967,9 +1019,9 @@ The most recent work is an attempt to connect three previously separate pieces i
 
 Groq and Gemini credentials are now represented in the intended configuration flow. The Groq connection-test action has been added, screenshot capture has been integrated for supported Android versions, and the vision description is passed into the planner.
 
-The two known compilation issues involving the Gemini JSON structure and the expanded settings callback were fixed in commits. However, the last recorded workflow was still in progress, so the current build status remains unconfirmed in this handoff.
+The two known compilation issues involving the Gemini JSON structure and the expanded settings callback were fixed in commits. The latest recorded GitHub Actions workflow, run #121, completed successfully. The next release still needs the additional search-navigation and overlay work described in the current progress update.
 
-The biggest technical limitation is that visual understanding does not yet equal unrestricted visual control. The current action path still relies on accessibility controls and does not implement general-purpose coordinate tapping based solely on the screenshot.
+The biggest technical limitation is that visual understanding does not yet equal reliable goal completion. The user has confirmed that Gemini vision can describe the screen, but a real cross-app request to find and play a song stopped at the app's search page. Theo needs search-driven navigation, a robust observe–act–verify loop, and a floating overlay that does not contaminate screen analysis. General-purpose coordinate tapping based solely on screenshots is still not established as implemented.
 
 The immediate priorities are therefore:
 
